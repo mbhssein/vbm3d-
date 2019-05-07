@@ -17,14 +17,14 @@ arf_obj = arf.read(filename, 'r')
  
  
 list_frames = [] 
-for n in range(10): 
+for n in range(4): 
     frame = arf_obj.load(n) 
     scaled_frame = img_tools.scale_frame_by_percentile(frame) 
     list_frames.append(scaled_frame)
     
     
-cv2.imshow('frame',list_frames[1]) 
-cv2.waitKey()
+#cv2.imshow('frame',list_frames[1]) 
+#cv2.waitKey()
 
-cleared_img = BM3Dfunc (list_frames[5],list_frames)
+cleared_img = BM3Dfunc (list_frames[3],list_frames)
 
