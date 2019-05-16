@@ -2,7 +2,7 @@
 import cv2 
 #import PSNR 
 import numpy 
-
+from numba import jit
 
  
 cv2.setUseOptimized(True) 
@@ -10,14 +10,14 @@ cv2.setUseOptimized(True)
 # Parameters initialization 
 sigma = 25 
 Threshold_Hard3D = 1*sigma           # Threshold for Hard Thresholding 
-First_Match_threshold = 100           
+First_Match_threshold = 2500         
 Step1_max_matched_cnt = 16             
 Step1_Blk_Size =8                   # block_Size 
 Step1_Blk_Step = 7                     # Rather than sliding by one pixel to every next reference block, use a step of Nstep pixels in both horizontal and vertical directions. 
 Step1_Search_Step = 7                    
 Step1_Search_Window = 39                 
  
-Second_Match_threshold = 10         
+Second_Match_threshold = 100         
 Step2_max_matched_cnt = 32 
 Step2_Blk_Size = 8 
 Step2_Blk_Step = 3 
@@ -26,7 +26,7 @@ Step2_Search_Window = 39
  
 Beta_Kaiser = 2.0 
  
- 
+@jit  
 def init(img, _blk_size, _Beta_Kaiser): 
   
     m_shape = img.shape 
@@ -36,7 +36,7 @@ def init(img, _blk_size, _Beta_Kaiser):
     m_Kaiser = numpy.array(K.T * K)           
     return m_img, m_wight, m_Kaiser 
  
- 
+@jit 
 def Locate_blk(i, j, blk_step, block_Size, width, height): 
  
     if i*blk_step+block_Size < width: 
@@ -53,7 +53,7 @@ def Locate_blk(i, j, blk_step, block_Size, width, height):
  
     return m_blockPoint 
  
- 
+@jit 
 def Define_SearchWindow(_noisyImg, _BlockPoint, _WindowSize, Blk_Size): 
    
     point_x = _BlockPoint[0]   
@@ -72,7 +72,7 @@ def Define_SearchWindow(_noisyImg, _BlockPoint, _WindowSize, Blk_Size):
  
     return numpy.array((LX, LY), dtype=int) 
  
- 
+@jit  
 def Step1_fast_match(_noisyImg, _BlockPoint): 
  
     (present_x, present_y) = _BlockPoint  
@@ -132,7 +132,7 @@ def Step1_fast_match(_noisyImg, _BlockPoint):
             blk_positions[i, :] = m_Blkpositions[Sort[i-1], :] 
     return Final_similar_blocks, blk_positions, Count 
  
- 
+@jit  
 def Step1_3DFiltering(_similar_blocks): 
  
     statis_nonzero = 0  
@@ -147,7 +147,7 @@ def Step1_3DFiltering(_similar_blocks):
             _similar_blocks[:, i, j] = cv2.idft(tem_Vct_Trans)[0] 
     return _similar_blocks, statis_nonzero 
  
- 
+@jit  
 def Aggregation_hardthreshold(_similar_blocks, blk_positions, m_basic_img, m_wight_img, _nonzero_num, Count, Kaiser): 
   
     _shape = _similar_blocks.shape 
@@ -160,7 +160,7 @@ def Aggregation_hardthreshold(_similar_blocks, blk_positions, m_basic_img, m_wig
         m_basic_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += tem_img 
         m_wight_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += block_wight 
  
- 
+@jit  
 def BM3D_1st_step(_noisyImg, list_frames ): 
     
     
@@ -188,7 +188,7 @@ def BM3D_1st_step(_noisyImg, list_frames ):
  
     return basic 
  
- 
+@jit  
 def Step2_fast_match(_Basic_img, _noisyImg, _BlockPoint): 
     
     (present_x, present_y) = _BlockPoint  
@@ -257,7 +257,7 @@ def Step2_fast_match(_Basic_img, _noisyImg, _BlockPoint):
  
     return Final_similar_blocks, Final_noisy_blocks, blk_positions, Count 
  
- 
+@jit  
 def Step2_3DFiltering(_Similar_Bscs, _Similar_Imgs): 
  
     m_Shape = _Similar_Bscs.shape 
@@ -279,7 +279,7 @@ def Step2_3DFiltering(_Similar_Bscs, _Similar_Imgs):
  
     return _Similar_Bscs, Wiener_wight 
  
- 
+@jit  
 def Aggregation_Wiener(_Similar_Blks, _Wiener_wight, blk_positions, m_basic_img, m_wight_img, Count, Kaiser): 
   
     _shape = _Similar_Blks.shape 
@@ -291,7 +291,7 @@ def Aggregation_Wiener(_Similar_Blks, _Wiener_wight, blk_positions, m_basic_img,
         m_basic_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += tem_img 
         m_wight_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += block_wight 
  
- 
+@jit  
 def BM3D_2nd_step(_basicImg, _noisyImg): 
     
     
@@ -303,13 +303,13 @@ def BM3D_2nd_step(_basicImg, _noisyImg):
  
     
     m_img, m_Wight, m_Kaiser = init(_noisyImg, block_Size, Beta_Kaiser) 
-    for k in _basicImg:
-        for i in range(int(Width_num+2)): 
-            for j in range(int(Height_num+2)): 
-                m_blockPoint = Locate_blk(i, j, blk_step, block_Size, width, height) 
-                Similar_Blks, Similar_Imgs, Positions, Count = Step2_fast_match(k, _noisyImg, m_blockPoint) 
-                Similar_Blks, Wiener_wight = Step2_3DFiltering(Similar_Blks, Similar_Imgs) 
-                Aggregation_Wiener(Similar_Blks, Wiener_wight, Positions, m_img, m_Wight, Count, m_Kaiser) 
+    
+    for i in range(int(Width_num+2)): 
+        for j in range(int(Height_num+2)): 
+            m_blockPoint = Locate_blk(i, j, blk_step, block_Size, width, height) 
+            Similar_Blks, Similar_Imgs, Positions, Count = Step2_fast_match(_basicImg, _noisyImg, m_blockPoint) 
+            Similar_Blks, Wiener_wight = Step2_3DFiltering(Similar_Blks, Similar_Imgs) 
+            Aggregation_Wiener(Similar_Blks, Wiener_wight, Positions, m_img, m_Wight, Count, m_Kaiser) 
     m_img[:, :] /= m_Wight[:, :] 
     Final = numpy.matrix(m_img, dtype=int) 
     Final.astype(numpy.uint8) 
