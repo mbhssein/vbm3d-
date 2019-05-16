@@ -1,22 +1,23 @@
  
 import cv2 
-import PSNR 
+#import PSNR 
 import numpy 
- 
+
+
  
 cv2.setUseOptimized(True) 
  
 # Parameters initialization 
 sigma = 25 
 Threshold_Hard3D = 1*sigma           # Threshold for Hard Thresholding 
-First_Match_threshold = 2500             
+First_Match_threshold = 100           
 Step1_max_matched_cnt = 16             
-Step1_Blk_Size = 4                     # block_Size 
-Step1_Blk_Step = 3                      # Rather than sliding by one pixel to every next reference block, use a step of Nstep pixels in both horizontal and vertical directions. 
-Step1_Search_Step = 3                    
+Step1_Blk_Size =8                   # block_Size 
+Step1_Blk_Step = 7                     # Rather than sliding by one pixel to every next reference block, use a step of Nstep pixels in both horizontal and vertical directions. 
+Step1_Search_Step = 7                    
 Step1_Search_Window = 39                 
  
-Second_Match_threshold = 400           
+Second_Match_threshold = 10         
 Step2_max_matched_cnt = 32 
 Step2_Blk_Size = 8 
 Step2_Blk_Step = 3 
@@ -85,9 +86,9 @@ def Step1_fast_match(_noisyImg, _BlockPoint):
     Final_similar_blocks = numpy.zeros((max_matched, Blk_Size, Blk_Size), dtype=float) 
  
     img = _noisyImg[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-    dct_img = cv2.dct(img.astype(numpy.float64))   
+    dft_img = cv2.dft(img.astype(numpy.float64))   
  
-    Final_similar_blocks[0, :, :] = dct_img 
+    Final_similar_blocks[0, :, :] = dft_img 
     blk_positions[0, :] = _BlockPoint 
  
     Window_location = Define_SearchWindow(_noisyImg, _BlockPoint, Window_size, Blk_Size) 
@@ -104,12 +105,12 @@ def Step1_fast_match(_noisyImg, _BlockPoint):
     for i in range(blk_num): 
         for j in range(blk_num): 
             tem_img = _noisyImg[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-            dct_Tem_img = cv2.dct(tem_img.astype(numpy.float64)) 
-            m_Distance = numpy.linalg.norm((dct_img-dct_Tem_img))**2 / (Blk_Size**2) 
+            dft_Tem_img = cv2.dft(tem_img.astype(numpy.float64)) 
+            m_Distance = numpy.linalg.norm((dft_img-dft_Tem_img),ord='nuc')**2 / (Blk_Size**2) 
  
            
             if m_Distance < Threshold and m_Distance > 0:   
-                similar_blocks[matched_cnt, :, :] = dct_Tem_img 
+                similar_blocks[matched_cnt, :, :] = dft_Tem_img 
                 m_Blkpositions[matched_cnt, :] = (present_x, present_y) 
                 Distances[matched_cnt] = m_Distance 
                 matched_cnt += 1 
@@ -140,10 +141,10 @@ def Step1_3DFiltering(_similar_blocks):
      
     for i in range(m_Shape[1]): 
         for j in range(m_Shape[2]): 
-            tem_Vct_Trans = cv2.dct(_similar_blocks[:, i, j]) 
+            tem_Vct_Trans = cv2.dft(_similar_blocks[:, i, j]) 
             tem_Vct_Trans[numpy.abs(tem_Vct_Trans[:]) < Threshold_Hard3D] = 0. 
             statis_nonzero += tem_Vct_Trans.nonzero()[0].size 
-            _similar_blocks[:, i, j] = cv2.idct(tem_Vct_Trans)[0] 
+            _similar_blocks[:, i, j] = cv2.idft(tem_Vct_Trans)[0] 
     return _similar_blocks, statis_nonzero 
  
  
@@ -155,7 +156,7 @@ def Aggregation_hardthreshold(_similar_blocks, blk_positions, m_basic_img, m_wig
     block_wight = (1./_nonzero_num) * Kaiser 
     for i in range(Count): 
         point = blk_positions[i, :] 
-        tem_img = (1./_nonzero_num)*cv2.idct(_similar_blocks[i, :, :]) * Kaiser 
+        tem_img = (1./_nonzero_num)*cv2.idft(_similar_blocks[i, :, :]) * Kaiser 
         m_basic_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += tem_img 
         m_wight_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += block_wight 
  
@@ -173,12 +174,12 @@ def BM3D_1st_step(_noisyImg, list_frames ):
     Basic_img, m_Wight, m_Kaiser = init(_noisyImg, Step1_Blk_Size, Beta_Kaiser) 
  
     
-   
+    for k in list_frames: 
         for i in range(int(Width_num+2)): 
             for j in range(int(Height_num+2)): 
                 
                 m_blockPoint = Locate_blk(i, j, blk_step, block_Size, width, height)        
-                Similar_Blks, Positions, Count = Step1_fast_match(list_frames, m_blockPoint) 
+                Similar_Blks, Positions, Count = Step1_fast_match(k, m_blockPoint) 
                 Similar_Blks, statis_nonzero = Step1_3DFiltering(Similar_Blks) 
                 Aggregation_hardthreshold(Similar_Blks, Positions, Basic_img, m_Wight, statis_nonzero, Count, m_Kaiser) 
     Basic_img[:, :] /= m_Wight[:, :] 
@@ -202,12 +203,12 @@ def Step2_fast_match(_Basic_img, _noisyImg, _BlockPoint):
     Final_noisy_blocks = numpy.zeros((max_matched, Blk_Size, Blk_Size), dtype=float) 
  
     img = _Basic_img[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-    dct_img = cv2.dct(img.astype(numpy.float32))   
-    Final_similar_blocks[0, :, :] = dct_img 
+    dft_img = cv2.dft(img.astype(numpy.float32))   
+    Final_similar_blocks[0, :, :] = dft_img 
  
     n_img = _noisyImg[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-    dct_n_img = cv2.dct(n_img.astype(numpy.float32))   
-    Final_noisy_blocks[0, :, :] = dct_n_img 
+    dft_n_img = cv2.dft(n_img.astype(numpy.float32))   
+    Final_noisy_blocks[0, :, :] = dft_n_img 
  
     blk_positions[0, :] = _BlockPoint 
  
@@ -225,12 +226,12 @@ def Step2_fast_match(_Basic_img, _noisyImg, _BlockPoint):
     for i in range(blk_num): 
         for j in range(blk_num): 
             tem_img = _Basic_img[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-            dct_Tem_img = cv2.dct(tem_img.astype(numpy.float32)) 
-            m_Distance = numpy.linalg.norm((dct_img-dct_Tem_img))**2 / (Blk_Size**2) 
+            dft_Tem_img = cv2.dft(tem_img.astype(numpy.float32)) 
+            m_Distance = numpy.linalg.norm((dft_img-dft_Tem_img))**2 / (Blk_Size**2) 
  
             
             if m_Distance < Threshold and m_Distance > 0: 
-                similar_blocks[matched_cnt, :, :] = dct_Tem_img 
+                similar_blocks[matched_cnt, :, :] = dft_Tem_img 
                 m_Blkpositions[matched_cnt, :] = (present_x, present_y) 
                 Distances[matched_cnt] = m_Distance 
                 matched_cnt += 1 
@@ -252,7 +253,7 @@ def Step2_fast_match(_Basic_img, _noisyImg, _BlockPoint):
  
             (present_x, present_y) = m_Blkpositions[Sort[i-1], :] 
             n_img = _noisyImg[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
-            Final_noisy_blocks[i, :, :] = cv2.dct(n_img.astype(numpy.float64)) 
+            Final_noisy_blocks[i, :, :] = cv2.dft(n_img.astype(numpy.float64)) 
  
     return Final_similar_blocks, Final_noisy_blocks, blk_positions, Count 
  
@@ -265,7 +266,7 @@ def Step2_3DFiltering(_Similar_Bscs, _Similar_Imgs):
     for i in range(m_Shape[1]): 
         for j in range(m_Shape[2]): 
             tem_vector = _Similar_Bscs[:, i, j] 
-            tem_Vct_Trans = numpy.matrix(cv2.dct(tem_vector)) 
+            tem_Vct_Trans = numpy.matrix(cv2.dft(tem_vector)) 
             Norm_2 = numpy.float64(tem_Vct_Trans.T * tem_Vct_Trans) 
             m_weight = Norm_2/(Norm_2 + sigma**2) 
             if m_weight != 0: 
@@ -273,8 +274,8 @@ def Step2_3DFiltering(_Similar_Bscs, _Similar_Imgs):
             # else: 
             #     Wiener_wight[i, j] = 10000 
             tem_vector = _Similar_Imgs[:, i, j] 
-            tem_Vct_Trans = m_weight * cv2.dct(tem_vector) 
-            _Similar_Bscs[:, i, j] = cv2.idct(tem_Vct_Trans)[0] 
+            tem_Vct_Trans = m_weight * cv2.dft(tem_vector) 
+            _Similar_Bscs[:, i, j] = cv2.idft(tem_Vct_Trans)[0] 
  
     return _Similar_Bscs, Wiener_wight 
  
@@ -286,7 +287,7 @@ def Aggregation_Wiener(_Similar_Blks, _Wiener_wight, blk_positions, m_basic_img,
  
     for i in range(Count): 
         point = blk_positions[i, :] 
-        tem_img = _Wiener_wight * cv2.idct(_Similar_Blks[i, :, :]) # * Kaiser 
+        tem_img = _Wiener_wight * cv2.idft(_Similar_Blks[i, :, :]) # * Kaiser 
         m_basic_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += tem_img 
         m_wight_img[point[0]:point[0]+_shape[1], point[1]:point[1]+_shape[2]] += block_wight 
  
@@ -302,13 +303,13 @@ def BM3D_2nd_step(_basicImg, _noisyImg):
  
     
     m_img, m_Wight, m_Kaiser = init(_noisyImg, block_Size, Beta_Kaiser) 
- 
-    for i in range(int(Width_num+2)): 
-        for j in range(int(Height_num+2)): 
-            m_blockPoint = Locate_blk(i, j, blk_step, block_Size, width, height) 
-            Similar_Blks, Similar_Imgs, Positions, Count = Step2_fast_match(_basicImg, _noisyImg, m_blockPoint) 
-            Similar_Blks, Wiener_wight = Step2_3DFiltering(Similar_Blks, Similar_Imgs) 
-            Aggregation_Wiener(Similar_Blks, Wiener_wight, Positions, m_img, m_Wight, Count, m_Kaiser) 
+    for k in _basicImg:
+        for i in range(int(Width_num+2)): 
+            for j in range(int(Height_num+2)): 
+                m_blockPoint = Locate_blk(i, j, blk_step, block_Size, width, height) 
+                Similar_Blks, Similar_Imgs, Positions, Count = Step2_fast_match(k, _noisyImg, m_blockPoint) 
+                Similar_Blks, Wiener_wight = Step2_3DFiltering(Similar_Blks, Similar_Imgs) 
+                Aggregation_Wiener(Similar_Blks, Wiener_wight, Positions, m_img, m_Wight, Count, m_Kaiser) 
     m_img[:, :] /= m_Wight[:, :] 
     Final = numpy.matrix(m_img, dtype=int) 
     Final.astype(numpy.uint8) 
@@ -316,35 +317,35 @@ def BM3D_2nd_step(_basicImg, _noisyImg):
     return Final 
  
  
-def BM3Dfunc(img, list_frames): 
-    cv2.setUseOptimized(True)   
-    #img_name = "frame1.jpg"   
-    #img = cv2.imread(img_name, cv2.IMREAD_GRAYSCALE)   
- 
-    
-    e1 = cv2.getTickCount()   
-    # if(img is not None): 
-    #     print("success") 
-    Basic_img = BM3D_1st_step(img, list_frames) 
-    e2 = cv2.getTickCount() 
-    time = (e2 - e1) / cv2.getTickFrequency()   
-    print ("The Processing time of the First step is %f s" % time) 
-    cv2.imwrite("Basic3.jpg", Basic_img) 
-   
-    psnr = PSNR.PSNR(img, Basic_img) 
-    print ("The PSNR between the two img of the First step is %f" % psnr) 
- 
-    # Basic_img = cv2.imread("Basic3.jpg", cv2.IMREAD_GRAYSCALE) 
- 
-    Final_img = BM3D_2nd_step(Basic_img, img) 
-    e3 = cv2.getTickCount() 
-    time = (e3 - e2) / cv2.getTickFrequency() 
-    print ("The Processing time of the Second step is %f s" % time) 
-    cv2.imwrite("Final3.jpg", Final_img) 
- 
- 
-    psnr = PSNR.PSNR(img, Final_img) 
-    print ("The PSNR between the two img of the Second step is %f" % psnr) 
-    time = (e3 - e1) / cv2.getTickFrequency()    
-    print ("The total Processing time is %f s" % time) 
- 
+#def BM3Dfunc(img, list_frames): 
+#    cv2.setUseOptimized(True)   
+#    #img_name = "frame1.jpg"   
+#    #img = cv2.imread(img_name, cv2.IMREAD_GRAYSCALE)   
+# 
+#    
+#    e1 = cv2.getTickCount()   
+#    # if(img is not None): 
+#    #     print("success") 
+#    Basic_img = BM3D_1st_step(img, list_frames) 
+#    e2 = cv2.getTickCount() 
+#    time = (e2 - e1) / cv2.getTickFrequency()   
+#    print ("The Processing time of the First step is %f s" % time) 
+#    cv2.imwrite("Basic3.jpg", Basic_img) 
+#   
+#    psnr = PSNR.PSNR(img, Basic_img) 
+#    print ("The PSNR between the two img of the First step is %f" % psnr) 
+# 
+#    # Basic_img = cv2.imread("Basic3.jpg", cv2.IMREAD_GRAYSCALE) 
+# 
+#    Final_img = BM3D_2nd_step(Basic_img, img) 
+#    e3 = cv2.getTickCount() 
+#    time = (e3 - e2) / cv2.getTickFrequency() 
+#    print ("The Processing time of the Second step is %f s" % time) 
+#    cv2.imwrite("Final3.jpg", Final_img) 
+# 
+# 
+#    psnr = PSNR.PSNR(img, Final_img) 
+#    print ("The PSNR between the two img of the Second step is %f" % psnr) 
+#    time = (e3 - e1) / cv2.getTickFrequency()    
+#    print ("The total Processing time is %f s" % time) 
+# 
