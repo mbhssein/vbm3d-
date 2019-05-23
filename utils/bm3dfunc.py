@@ -3,6 +3,7 @@ import cv2
 #import PSNR 
 import numpy 
 from numba import jit
+import pywt
 
  
 cv2.setUseOptimized(True) 
@@ -87,7 +88,7 @@ def Step1_fast_match(_noisyImg, _BlockPoint):
  
     img = _noisyImg[present_x: present_x+Blk_Size, present_y: present_y+Blk_Size] 
     dft_img = cv2.dft(img.astype(numpy.float64))   
- 
+    #dft_img = pywt.dwt2(img.astype(numpy.float64), 'haar')
     Final_similar_blocks[0, :, :] = dft_img 
     blk_positions[0, :] = _BlockPoint 
  
@@ -145,6 +146,7 @@ def Step1_3DFiltering(_similar_blocks):
             tem_Vct_Trans[numpy.abs(tem_Vct_Trans[:]) < Threshold_Hard3D] = 0. 
             statis_nonzero += tem_Vct_Trans.nonzero()[0].size 
             _similar_blocks[:, i, j] = cv2.idft(tem_Vct_Trans)[0] 
+            #_similar_blocks[:, i, j] = pywt.idwt2(tem_Vct_Trans, 'bior1.3')[0] 
     return _similar_blocks, statis_nonzero 
  
 @jit  
