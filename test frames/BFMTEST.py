@@ -101,7 +101,12 @@ for i in range(len(good)):
     pts_src.append(srcPoint)
     pts_dst.append(dstPoint)
 
-#
+newimg=AbuSMatrix(img2, img1, (100,200))
+
+
+
+
+plt.imshow(newimg, cmap = 'gray')
 #MIN_MATCH_COUNT = 10
 #if len(good)>MIN_MATCH_COUNT:
 #    src_pts = np.float32(([kp1[idx].pt for idx in range(0, len(kp1))])).reshape(-1,1,2)
