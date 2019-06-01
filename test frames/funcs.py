@@ -58,20 +58,26 @@ def sifter(template, frame):
     
     return pts_src, pts_dst
         
-def get_blocks(arr,x_cntr, y_cntr):
-    block_Size = 32 
+def pt2blk(arr,x_cntr, y_cntr):
+    blkS = 32 
     
     i = int(x_cntr)
     j = int(y_cntr)
-    xcord = i- (block_Size % 2)
-    xend = xcord + block_Size
-    ycord = j - (block_Size % 2)
-    yend =  ycord + block_Size
-    if xend > arr.shape[0] or yend > arr.shape[1]: 
-        block = np.zeros(block_Size)
+    xstart = i- (blkS-1 / 2)
+    ystart = j - (blkS-1 / 2)
+    if xstart <0 or ystart <0:
+        xstart = 0
+        ystart = 0 
+    
+    if xstart +blkS > arr.shape[0] or ystart +blkS > arr.shape[1]: 
+        xend = arr.shape[0]-1 
+        yend = arr.shape[1]-1 
+    else:
+        xend = xstart + blkS 
+        yend = ystart + blkS
         
 #        block = arr[xcord:xend, ycord:yend]
-    block = arr[xcord:xend, ycord:yend]
+    block = arr[xstart:xend, ystart:yend]
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):

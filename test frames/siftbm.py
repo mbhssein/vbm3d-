@@ -3,12 +3,12 @@ import cv2
 from matplotlib import pyplot as plt
 import arf  
 from clairvoyance import img_tools 
-from funcs import sliding_window2, sifter 
+from funcs import sliding_window2, sifter, pt2blk, hist_match, AbuSMatrix
 import time 
 #from hist_match import hist_match
 #matched = hist_match(source, template)
 
-winS = 128
+winS = 256
 
 t1 = time.clock()
 
@@ -18,12 +18,24 @@ img2 = arf_obj.load(100)
 img2 = img_tools.scale_frame_by_percentile(img2,low_pct=1, high_pct=99)*255
 img2 = img2.astype(np.uint8)
 blocks = []
-for (x, y, window) in sliding_window2(img2, stepSize=32, windowSize=(winS, winS)):
+for (x, y, window) in sliding_window2(img2, stepSize=64, windowSize=(winS, winS)):
 		# if the window does not meet our desired window size, ignore it
     if window.shape[0] != winS or window.shape[1] != winS:
          continue
+    print ('mean is', np.mean(window))
+    pts_src, pts_dst = sifter(window, img2)
+    for src,dst in zip(pts_src,pts_dst):
+        src_blk = pt2blk(window,pts_src[0],pts_src[1])
+        dst_blk = pt2blk(img2, pts_dst[0],pts_dst[1])
+        matched = hist_match(dst_blk, src_blk)
+        new_image = AbuSMatrix(img2, matched, (dst))
     
-    plt.imshow(window)
+    
+    
+    
+    
+    
+plt.imshow(new_image)
 #    img1 = window
 #    pts_src, pts_dst = sifter(img1, img2)
 
