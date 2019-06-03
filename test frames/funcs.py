@@ -1,4 +1,4 @@
-
+import numpy as np
 import cv2 
 from skimage.exposure import cumulative_distribution
 #from hist_match import hist_match
@@ -7,11 +7,11 @@ from skimage.exposure import cumulative_distribution
 
 
 
-def sifter(template, frame):
+def sifter(window, frame):
     sift = cv2.xfeatures2d.SIFT_create()
 
     # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(template,None)
+    kp1, des1 = sift.detectAndCompute(window,None)
     kp2, des2 =sift.detectAndCompute(frame,None)
     
     FLANN_INDEX_KDTREE = 0
@@ -69,7 +69,7 @@ def pt2blk(arr,x_cntr, y_cntr):
 #        block = arr[xstart:xend, ystart:yend]
 #        
 #        block = arr[xcord:xend, ycord:yend]
-    block = arr[xstart:xstart+blkS-1, ystart:ystart+blkS-1]
+    block = arr[xstart:xstart+blkS, ystart:ystart+blkS]
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):
@@ -82,49 +82,49 @@ def AbuSMatrix(big_one, small_one, starting_point):
     return big_one
 
 
-import numpy as np
 
-def hist_match(source, template):
-    """
-    Adjust the pixel values of a grayscale image such that its histogram
-    matches that of a target image
 
-    Arguments:
-    -----------
-        source: np.ndarray
-            Image to transform; the histogram is computed over the flattened
-            array
-        template: np.ndarray
-            Template image; can have different dimensions to source
-    Returns:
-    -----------
-        matched: np.ndarray
-            The transformed output image
-    """
-
-    oldshape = source.shape
-    source = source.ravel()
-    template = template.ravel()
-
-    # get the set of unique pixel values and their corresponding indices and
-    # counts
-    s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
-                                            return_counts=True)
-    t_values, t_counts = np.unique(template, return_counts=True)
-
-    # take the cumsum of the counts and normalize by the number of pixels to
-    # get the empirical cumulative distribution functions for the source and
-    # template images (maps pixel value --> quantile)
-    s_quantiles = np.cumsum(s_counts).astype(np.float64)
-    s_quantiles /= s_quantiles[-1]
-    t_quantiles = np.cumsum(t_counts).astype(np.float64)
-    t_quantiles /= t_quantiles[-1]
-
-    # interpolate linearly to find the pixel values in the template image
-    # that correspond most closely to the quantiles in the source image
-    interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
-
-    return interp_t_values[bin_idx].reshape(oldshape)
+#def hist_match(source, template):
+#    """
+#    Adjust the pixel values of a grayscale image such that its histogram
+#    matches that of a target image
+#
+#    Arguments:
+#    -----------
+#        source: np.ndarray
+#            Image to transform; the histogram is computed over the flattened
+#            array
+#        template: np.ndarray
+#            Template image; can have different dimensions to source
+#    Returns:
+#    -----------
+#        matched: np.ndarray
+#            The transformed output image
+#    """
+#
+#    oldshape = source.shape
+#    source = source.ravel()
+#    template = template.ravel()
+#
+#    # get the set of unique pixel values and their corresponding indices and
+#    # counts
+#    s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
+#                                            return_counts=True)
+#    t_values, t_counts = np.unique(template, return_counts=True)
+#
+#    # take the cumsum of the counts and normalize by the number of pixels to
+#    # get the empirical cumulative distribution functions for the source and
+#    # template images (maps pixel value --> quantile)
+#    s_quantiles = np.cumsum(s_counts).astype(np.float64)
+#    s_quantiles /= s_quantiles[-1]
+#    t_quantiles = np.cumsum(t_counts).astype(np.float64)
+#    t_quantiles /= t_quantiles[-1]
+#
+#    # interpolate linearly to find the pixel values in the template image
+#    # that correspond most closely to the quantiles in the source image
+#    interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
+#
+#    return interp_t_values[bin_idx].reshape(oldshape)
 
 def sliding_window2(image, stepSize, windowSize):
 	# slide a window across the image
