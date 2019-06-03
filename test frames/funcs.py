@@ -1,26 +1,8 @@
 
 import cv2 
+from skimage.exposure import cumulative_distribution
 #from hist_match import hist_match
 
-
-def sliding_window(image, stepSize, windowSize):
-	# slide a window across the image
-    new_image = []
-    for y in range(0, image.shape[0], stepSize):
-        for x in range(0, image.shape[1], stepSize):
-            # yield the current window
-            print ('processing window {}'.format(y+x))
-            block = image[y:y + windowSize[1], x:x + windowSize[0]]
-            pts_src, pts_dst = sifter(block, image)
-            for src,dst in zip(pts_src,pts_dst):
-                src_blk = get_blocks(image,pts_src[0],pts_src[1])
-                dst_blk = get_blocks(block, pts_dst[0],pts_dst[1])
-                matched = hist_match(dst_blk, src_blk)
-                new_image = AbuSMatrix(image, matched, (dst))
-# =============================================================================
-#                         histogram match!!! and or filtering here
-# =============================================================================
-    return new_image
 
 
 
@@ -42,7 +24,7 @@ def sifter(template, frame):
     
     good = []
     for m,n in matches:
-        if m.distance < 0.75*n.distance:
+        if m.distance < 0.95*n.distance:
             good.append([m])
             
     print ('{} points extracted and filtered to {}'.format(len(matches),len(good)))        
@@ -63,21 +45,31 @@ def pt2blk(arr,x_cntr, y_cntr):
     
     i = int(x_cntr)
     j = int(y_cntr)
-    xstart = i- (blkS-1 / 2)
-    ystart = j - (blkS-1 / 2)
-    if xstart <0 or ystart <0:
-        xstart = 0
-        ystart = 0 
     
-    if xstart +blkS > arr.shape[0] or ystart +blkS > arr.shape[1]: 
-        xend = arr.shape[0]-1 
-        yend = arr.shape[1]-1 
-    else:
-        xend = xstart + blkS 
-        yend = ystart + blkS
+    xstart = int(i- (blkS-1 / 2))
+    ystart = int(j - (blkS-1 / 2))
+    
+    if xstart <0:
+        xstart = 0
         
+    if ystart < 0: 
+        ystart = 0
+        
+    if xstart+blkS > arr.shape[0]:
+        xstart = arr.shape[0]-blkS - 1 
+        
+    if ystart+blkS >arr.shape[1] :
+        ystart = arr.shape[1]-blkS - 1 
+    
+#    if xstart +blkS > arr.shape[0] or ystart +blkS > arr.shape[1]: 
+#        xend = arr.shape[0]-1 
+#        yend = arr.shape[1]-1 
+#        block = arr[xstart:xend, ystart:yend]
+#    else:
+#        block = arr[xstart:xend, ystart:yend]
+#        
 #        block = arr[xcord:xend, ycord:yend]
-    block = arr[xstart:xend, ystart:yend]
+    block = arr[xstart:xstart+blkS-1, ystart:ystart+blkS-1]
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):
@@ -140,3 +132,52 @@ def sliding_window2(image, stepSize, windowSize):
 		for x in range(0, image.shape[1], stepSize):
 			# yield the current window
 			yield (x, y, image[y:y + windowSize[1], x:x + windowSize[0]])
+            
+            
+def cdf(im):
+ '''
+ computes the CDF of an image im as 2D numpy ndarray
+ '''
+ c, b = cumulative_distribution(im) 
+ # pad the beginning and ending pixels and their CDF values
+ c = np.insert(c, 0, [0]*b[0])
+ c = np.append(c, [1]*(255-b[-1]))
+ return c
+
+def hist_matching(c, c_t, im):
+ '''
+ c: CDF of input image computed with the function cdf()
+ c_t: CDF of template image computed with the function cdf()
+ im: input image as 2D numpy ndarray
+ returns the modified pixel values
+ ''' 
+ pixels = np.arange(256)
+ # find closest pixel-matches corresponding to the CDF of the input image, given the value of the CDF H of   
+ # the template image at the corresponding pixels, s.t. c_t = H(pixels) <=> pixels = H-1(c_t)
+ new_pixels = np.interp(c, c_t, pixels) 
+ im = (np.reshape(new_pixels[im.ravel()], im.shape)).astype(np.uint8)
+ return im
+
+#def sliding_window(image, stepSize, windowSize):
+#	# slide a window across the image
+#    new_image = []
+#    for y in range(0, image.shape[0], stepSize):
+#        for x in range(0, image.shape[1], stepSize):
+#            # yield the current window
+#            print ('processing window {}'.format(y+x))
+#            block = image[y:y + windowSize[1], x:x + windowSize[0]]
+#            pts_src, pts_dst = sifter(block, image)
+#            for src,dst in zip(pts_src,pts_dst):
+#                src_blk = get_blocks(image,pts_src[0],pts_src[1])
+#                dst_blk = get_blocks(block, pts_dst[0],pts_dst[1])
+#                matched = hist_match(dst_blk, src_blk)
+#                new_image = AbuSMatrix(image, matched, (dst))
+## =============================================================================
+##                         histogram match!!! and or filtering here
+## =============================================================================
+#    return new_image
+#
+
+
+
+           
