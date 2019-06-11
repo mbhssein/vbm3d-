@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 
 from skimage.exposure import cumulative_distribution
-#from hist_match import hist_match
+
 
 
 
@@ -16,18 +16,21 @@ def sifter(window, frame):
     
     FLANN_INDEX_KDTREE = 0
     index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 1)
-    search_params = dict(checks = 50)
+    search_params = dict(checks = 1000)
     
     flann = cv2.FlannBasedMatcher(index_params, search_params)
     #bf = cv2.BFMatcher()
     matches = flann.knnMatch(des1,des2,k=2)
     
+    
+    matches= sorted(matches, key = lambda x:x[0].distance)
+    
     good = []
     for m,n in matches:
-        if m.distance < 0.95*n.distance:
+        if m.distance < 0.5*n.distance:
             good.append([m])
-            
-    print ('{} points extracted and filtered to {}'.format(len(matches),len(good)))        
+        
+    print ('{} points extracted and reduced to {}'.format(len(matches),len(good)))        
             
     pts_src = []
     pts_dst = []
@@ -73,58 +76,60 @@ def pt2blk(arr,x_cntr, y_cntr):
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):
+    newimg= big_one.copy() 
     for i in range(big_one.shape[0]):
         for j in range(big_one.shape[1]):
             if i == starting_point[0] and j == starting_point[1]:
                 for x in range(small_one.shape[0]):
                     for y in range(small_one.shape[1]):
-                        big_one[i + x][j + y] = small_one[x][y]
-    return big_one
+                        newimg[i + x][j + y] = small_one[x][y]
+                        newimg[i + x][j + y] = newimg[i + x][j + y]+small_one[x][y]
+    return newimg
 
 
 
 
-#def hist_match(source, template):
-#    """
-#    Adjust the pixel values of a grayscale image such that its histogram
-#    matches that of a target image
-#
-#    Arguments:
-#    -----------
-#        source: np.ndarray
-#            Image to transform; the histogram is computed over the flattened
-#            array
-#        template: np.ndarray
-#            Template image; can have different dimensions to source
-#    Returns:
-#    -----------
-#        matched: np.ndarray
-#            The transformed output image
-#    """
-#
-#    oldshape = source.shape
-#    source = source.ravel()
-#    template = template.ravel()
-#
-#    # get the set of unique pixel values and their corresponding indices and
-#    # counts
-#    s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
-#                                            return_counts=True)
-#    t_values, t_counts = np.unique(template, return_counts=True)
-#
-#    # take the cumsum of the counts and normalize by the number of pixels to
-#    # get the empirical cumulative distribution functions for the source and
-#    # template images (maps pixel value --> quantile)
-#    s_quantiles = np.cumsum(s_counts).astype(np.float64)
-#    s_quantiles /= s_quantiles[-1]
-#    t_quantiles = np.cumsum(t_counts).astype(np.float64)
-#    t_quantiles /= t_quantiles[-1]
-#
-#    # interpolate linearly to find the pixel values in the template image
-#    # that correspond most closely to the quantiles in the source image
-#    interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
-#
-#    return interp_t_values[bin_idx].reshape(oldshape)
+def hist_match(source, template):
+    """
+    Adjust the pixel values of a grayscale image such that its histogram
+    matches that of a target image
+
+    Arguments:
+    -----------
+        source: np.ndarray
+            Image to transform; the histogram is computed over the flattened
+            array
+        template: np.ndarray
+            Template image; can have different dimensions to source
+    Returns:
+    -----------
+        matched: np.ndarray
+            The transformed output image
+    """
+
+    oldshape = source.shape
+    source = source.ravel()
+    template = template.ravel()
+
+    # get the set of unique pixel values and their corresponding indices and
+    # counts
+    s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
+                                            return_counts=True)
+    t_values, t_counts = np.unique(template, return_counts=True)
+
+    # take the cumsum of the counts and normalize by the number of pixels to
+    # get the empirical cumulative distribution functions for the source and
+    # template images (maps pixel value --> quantile)
+    s_quantiles = np.cumsum(s_counts).astype(np.float64)
+    s_quantiles /= s_quantiles[-1]
+    t_quantiles = np.cumsum(t_counts).astype(np.float64)
+    t_quantiles /= t_quantiles[-1]
+
+    # interpolate linearly to find the pixel values in the template image
+    # that correspond most closely to the quantiles in the source image
+    interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
+
+    return interp_t_values[bin_idx].reshape(oldshape)
 
 def sliding_window2(image, stepSize, windowSize):
 	# slide a window across the image
