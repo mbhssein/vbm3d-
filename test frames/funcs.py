@@ -13,9 +13,12 @@ def sifter(window, frame):
     # find the keypoints and descriptors with SIFT
     kp1, des1 = sift.detectAndCompute(window,None)
     kp2, des2 =sift.detectAndCompute(frame,None)
-    
+#    print ('des1',des1)
+#    print ('des2', des2)
+#    if np.any(des1 != None):
+#        print ('des1!!!!!!!!!!!!!!!!!!!', des1)
     FLANN_INDEX_KDTREE = 0
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 1)
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
     search_params = dict(checks = 1000)
     
     flann = cv2.FlannBasedMatcher(index_params, search_params)
@@ -23,7 +26,7 @@ def sifter(window, frame):
     matches = flann.knnMatch(des1,des2,k=2)
     
     
-    matches= sorted(matches, key = lambda x:x[0].distance)
+    matches= sorted(matches, key = lambda x:x[0].distance, reverse=True)
     
     good = []
     for m,n in matches:
@@ -44,7 +47,7 @@ def sifter(window, frame):
     return pts_src, pts_dst
         
 def pt2blk(arr,x_cntr, y_cntr):
-    blkS = 32 
+    blkS = 32
     
     i = int(x_cntr)
     j = int(y_cntr)
@@ -83,7 +86,7 @@ def AbuSMatrix(big_one, small_one, starting_point):
                 for x in range(small_one.shape[0]):
                     for y in range(small_one.shape[1]):
                         newimg[i + x][j + y] = small_one[x][y]
-                        newimg[i + x][j + y] = newimg[i + x][j + y]+small_one[x][y]
+#                        newimg[i + x][j + y] = newimg[i + x][j + y]+small_one[x][y]
     return newimg
 
 

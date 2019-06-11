@@ -18,7 +18,7 @@ t1 = time.clock()
 # import and scale image 
 file2 = r'D:\Frames\frames-tm1490200440gr00-4\Frames-tm1490200440gr00-4.arf' 
 arf_obj = arf.read(file2, 'r') 
-img2 = arf_obj.load(250) 
+img2 = arf_obj.load(200) 
 
 img2 = img_tools.scale_frame_by_percentile(img2,low_pct=1, high_pct=99)*255
 img2 = img2.astype(np.uint8)
@@ -27,11 +27,11 @@ ref_img= arf_obj.load(887)
 ref_img = img_tools.scale_frame_by_percentile(ref_img,low_pct=1, high_pct=99)*255
 ref_img = ref_img.astype(np.uint8)
 # =============================================================================
-winS = 256
+winS = 50
 blocks = []
 # =============================================================================
 # Matching first step
-new_img = img2
+new_img = img2.copy()
 
 for (x, y, window) in sliding_window2(new_img, stepSize=64, windowSize=(winS, winS)):
 		# if the window does not meet our desired window size, ignore it
@@ -45,7 +45,7 @@ for (x, y, window) in sliding_window2(new_img, stepSize=64, windowSize=(winS, wi
         dst_blk = pt2blk(ref_img, pts_dst[0][0],pts_dst[0][1])
         matched = hist_match(src_blk, dst_blk)
         plt.imsave('blocks/block{}.jpg'.format(dst[0]),matched, cmap = 'gray')
-#        matched = np.zeros([500,500])
+        matched = np.zeros([500,500])
 #        matched = match_histograms(dst_blk, src_blk, multichannel=False)
 #        c = cdf (dst_blk)
 #        c_t = cdf (src_blk)
