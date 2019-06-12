@@ -79,15 +79,15 @@ def pt2blk(arr,x_cntr, y_cntr):
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):
-    newimg= big_one.copy() 
+#    newimg= big_one.copy() 
     for i in range(big_one.shape[0]):
         for j in range(big_one.shape[1]):
             if i == starting_point[0] and j == starting_point[1]:
                 for x in range(small_one.shape[0]):
                     for y in range(small_one.shape[1]):
-                        newimg[i + x][j + y] = small_one[x][y]
+                        big_one[i + x][j + y] = small_one[x][y]
 #                        newimg[i + x][j + y] = newimg[i + x][j + y]+small_one[x][y]
-    return newimg
+    return big_one
 
 
 
