@@ -39,46 +39,52 @@ brisk = cv2.BRISK_create()
 sift = cv2.xfeatures2d.SIFT_create()
 
 # find the keypoints and descriptors with SIFT
+# find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)
 kp2, des2 =sift.detectAndCompute(img2,None)
-
+#    print ('des1',des1)
+#    print ('des2', des2)
+#    if np.any(des1 != None):
+#        print ('des1!!!!!!!!!!!!!!!!!!!', des1)
 FLANN_INDEX_KDTREE = 0
-index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 1)
-search_params = dict(checks = 50)
+index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 100)
+search_params = dict(checks = 15000)
 
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 #bf = cv2.BFMatcher()
 matches = flann.knnMatch(des1,des2,k=2)
-# create BFMatcher object
-#bf = cv2.BFMatcher()#cv2.NORM_L2, crossCheck=False)
-#
-## Match descriptors.
-#matches = bf.knnMatch(des1,des2, k=2)#bf.match(des1,des2)
-#
-## Sort them in the order of their distance.
-#matches = sorted(matches, key = lambda m:m.distance)
 
-# Apply ratio test
+
+matches= sorted(matches, key = lambda x:x[0].distance, reverse=True)
+
 good = []
-good_no_list =[]
 for m,n in matches:
-    if m.distance < 0.96*n.distance:
+    if m.distance < 1*n.distance:
         good.append([m])
-        good_no_list.append(m)
+    
+print ('{} points extracted and reduced to {}'.format(len(matches),len(good)))        
+        
+pts_src = []
+pts_dst = []
+for i in range(len(good)):
+    srcPoint = kp1[ good[i][0].queryIdx ].pt
+    dstPoint = kp2[ good[i][0].trainIdx ].pt
+    pts_src.append(srcPoint)
+    pts_dst.append(dstPoint)   
 # Draw first 10 matches.
 img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None, flags=2)
-
+#
 plt.imshow(img3),plt.show()
-#plt.imsave('sift_KNN2_096.jpg',img3)
-
-
-pts_frame = ([kp2[idx].pt for idx in range(0, len(kp2))])
-pts_obj = ([kp1[idx].pt for idx in range(0, len(kp1))])
-
-
-height, width = img2.shape
-blk_step = 3 
-block_Size = 7
+##plt.imsave('sift_KNN2_096.jpg',img3)
+#
+#
+#pts_frame = ([kp2[idx].pt for idx in range(0, len(kp2))])
+#pts_obj = ([kp1[idx].pt for idx in range(0, len(kp1))])
+#
+#
+#height, width = img2.shape
+#blk_step = 3 
+#block_Size = 7
 #
 #blocks= []
 #for coords in pts_frame:
@@ -101,12 +107,12 @@ for i in range(len(good)):
     pts_src.append(srcPoint)
     pts_dst.append(dstPoint)
 
-newimg=AbuSMatrix(img2, img1, (100,200))
+#newimg=AbuSMatrix(img2, img1, (100,200))
 
 
 
 
-plt.imshow(newimg, cmap = 'gray')
+#plt.imshow(newimg, cmap = 'gray')
 #MIN_MATCH_COUNT = 10
 #if len(good)>MIN_MATCH_COUNT:
 #    src_pts = np.float32(([kp1[idx].pt for idx in range(0, len(kp1))])).reshape(-1,1,2)

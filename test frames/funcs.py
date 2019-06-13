@@ -18,8 +18,8 @@ def sifter(window, frame):
 #    if np.any(des1 != None):
 #        print ('des1!!!!!!!!!!!!!!!!!!!', des1)
     FLANN_INDEX_KDTREE = 0
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 1000)
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 2)
+    search_params = dict(checks = 500)
     
     flann = cv2.FlannBasedMatcher(index_params, search_params)
     #bf = cv2.BFMatcher()
@@ -30,7 +30,7 @@ def sifter(window, frame):
     
     good = []
     for m,n in matches:
-        if m.distance < 0.5*n.distance:
+        if m.distance < 1*n.distance:
             good.append([m])
         
     print ('{} points extracted and reduced to {}'.format(len(matches),len(good)))        
@@ -46,8 +46,8 @@ def sifter(window, frame):
     
     return pts_src, pts_dst
         
-def pt2blk(arr,x_cntr, y_cntr):
-    blkS = 32
+def pt2blk(arr,x_cntr, y_cntr, blkS):
+    
     
     i = int(x_cntr)
     j = int(y_cntr)
@@ -79,10 +79,19 @@ def pt2blk(arr,x_cntr, y_cntr):
     return block
 
 def AbuSMatrix(big_one, small_one, starting_point):
-#    newimg= big_one.copy() 
+    
+    point = list(starting_point)
+    blkS = small_one.shape[0]
+    
+    if point[0]+blkS > big_one.shape[0]:
+        point[0] = big_one.shape[0]-blkS
+        
+    if point[1]+ blkS > big_one.shape[1]:
+        point[1] = big_one.shape[1]-blkS
+        
     for i in range(big_one.shape[0]):
         for j in range(big_one.shape[1]):
-            if i == starting_point[0] and j == starting_point[1]:
+            if i == point[0] and j == point[1]:
                 for x in range(small_one.shape[0]):
                     for y in range(small_one.shape[1]):
                         big_one[i + x][j + y] = small_one[x][y]
