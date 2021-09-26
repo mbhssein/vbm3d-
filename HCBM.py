@@ -1,5 +1,3 @@
-import arf  
-from clairvoyance import img_tools 
 import matplotlib.pyplot as plt 
 #from bm3dfunc import BM3D_1st_step,BM3D_2nd_step
 #import utils.PSNR
@@ -7,23 +5,9 @@ import cv2
 import numpy as np 
 
  
-#import cv2 
-#filename = r'D:\Frames\frames-TM1490200440GR00-4\frames-TM1490200440GR00-4.arf' 
-file2 = r'D:\Frames\frames-TM1490202529GR00-4\Frames-tm1490202529gr00-4.arf'
- 
-arf_obj = arf.read(file2, 'r') 
+#import cv2    
 
-frames = [] 
-for n in range(2): 
-    frame = arf_obj.load(n) 
-    frame = img_tools.scale_frame_by_percentile(frame) 
-    #list_frames.extend(scaled_frame)
-    #frame = cv2.resize(frame,None,fx=0.8,fy=0.8)
-    frames.append(frame)
-    
-    
-
-gray = frames [1]
+gray = #load image
 # find Harris corners
 gray = np.float32(gray)
 dst = cv2.cornerHarris(gray,2,3,0.04)
