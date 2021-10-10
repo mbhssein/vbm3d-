@@ -1,8 +1,7 @@
-import arf 
 import tools
 import cv2
 import os
-from clairvoyance.base import list_folder
+
 
 # =============================================================================
 # Image_path:  the directory to the set of images. use double backslashes.
@@ -10,7 +9,7 @@ from clairvoyance.base import list_folder
 # =============================================================================
 block_size = 32 
 number_of_frames = 5
-images_path = 'D:\\Frames\\frames-TM1490200440GR00-4\\TM1490200440GR00'
+images_path = 
 img_list = list_folder(images_path, extensions = 'png', fullpaths=True)
 load_images = img_list[:][:number_of_frames]
 # =============================================================================
